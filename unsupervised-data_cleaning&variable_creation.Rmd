@@ -1,0 +1,312 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Describe how you will fill in the necessary missing fields in the NY data (FULLVAL, AVLAND, AVTOT, LTFRONT, LTDEPTH, BLDFRONT, BLDDEPTH, ZIP, STORIES). 
+
+```{r}
+## read in data
+library(dplyr)
+data<-read.csv('NY property data.csv')
+```
+
+
+```{r}
+## fill ZIP
+library(zoo)
+data$ZIPnew<-na.locf(data$ZIP,fromLast = TRUE)
+```
+
+```{r}
+## change 0 to na
+data$LTFRONT<-ifelse(data$LTFRONT==0,NA,data$LTFRONT)
+data$LTDEPTH<-ifelse(data$LTDEPTH==0,NA,data$LTDEPTH)
+data$FULLVAL<-ifelse(data$FULLVAL==0,NA,data$FULLVAL)
+data$AVLAND<-ifelse(data$AVLAND==0,NA,data$AVLAND)
+data$AVTOT<-ifelse(data$AVTOT==0,NA,data$AVTOT)
+data$BLDFRONT<-ifelse(data$BLDFRONT==0,NA,data$BLDFRONT)
+data$BLDDEPTH<-ifelse(data$BLDDEPTH==0,NA,data$BLDDEPTH)
+```
+
+----------- include 5 ----------------------------------------------------------
+# fill FULLVAL, AVLAND, AVTOT
+3839 value missing
+```{r}
+# fill FULLVAL, AVLAND, AVTOT
+data<-data %>%
+  group_by(ZIPnew,TAXCLASS) %>%
+  mutate(count2=n(),medfull2=median(FULLVAL,na.rm=TRUE),medavl2=median(AVLAND,na.rm=TRUE),medavt2=median(AVTOT,na.rm=TRUE))
+```
+
+```{r}
+data<-data %>%
+  group_by(TAXCLASS) %>%
+  mutate(medfull1=median(FULLVAL,na.rm=TRUE),medavl1=median(AVLAND,na.rm=TRUE),medavt1=median(AVTOT,na.rm=TRUE))
+```
+
+```{r}
+data$FULLVALnew<-ifelse(data$count2<5,ifelse(is.na(data$FULLVAL)==TRUE,data$medfull1,data$FULLVAL),ifelse(is.na(data$FULLVAL)==TRUE,data$medfull2,data$FULLVAL))
+data$AVLANDnew<-ifelse(data$count2<5,ifelse(is.na(data$AVLAND)==TRUE,data$medavl1,data$AVLAND),ifelse(is.na(data$AVLAND)==TRUE,data$medavl2,data$AVLAND))
+data$AVTOTnew<-ifelse(data$count2<5,ifelse(is.na(data$AVTOT)==TRUE,data$medavt1,data$AVTOT),ifelse(is.na(data$AVTOT)==TRUE,data$medavt2,data$AVTOT))
+```
+
+```{r}
+data<-data %>%
+  group_by(TAXCLASS) %>%
+  mutate(FULLVALnew=ifelse(is.na(FULLVALnew)==TRUE,median(FULLVAL, na.rm=TRUE),FULLVALnew),AVLANDnew=ifelse(is.na(AVLANDnew)==TRUE,median(AVLAND, na.rm=TRUE),AVLANDnew),AVTOTnew=ifelse(is.na(AVTOTnew)==TRUE,median(AVTOT, na.rm=TRUE),AVTOTnew)) %>% 
+  ungroup()
+```
+
+
+```{r}
+# fill LTFRONT, LTDEPTH
+data<-data %>%
+  group_by(LOT,B) %>%
+  mutate(count22=n(),medltf2=median(LTFRONT,na.rm=TRUE),medltd2=median(LTDEPTH,na.rm=TRUE))
+```
+
+```{r}
+data<-data %>%
+  group_by(LOT) %>%
+  mutate(medltf1=median(LTFRONT,na.rm=TRUE),medltd1=median(LTDEPTH,na.rm=TRUE))
+```
+
+```{r}
+data$LTFRONTnew<-ifelse(data$count22<5,ifelse(is.na(data$LTFRONT)==TRUE,data$medltf1,data$LTFRONT),ifelse(is.na(data$LTFRONT)==TRUE,data$medltf2,data$LTFRONT))
+data$LTDEPTHnew<-ifelse(data$count22<5,ifelse(is.na(data$LTDEPTH)==TRUE,data$medltd1,data$LTDEPTH),ifelse(is.na(data$LTDEPTH)==TRUE,data$medltd2,data$LTDEPTH))
+```
+
+```{r}
+data<-data %>%
+  group_by(LOT) %>%
+  mutate(LTFRONTnew=ifelse(is.na(LTFRONTnew)==TRUE,median(LTFRONT,na.rm=TRUE),LTFRONTnew),LTDEPTHnew=ifelse(is.na(LTDEPTHnew)==TRUE,median(LTDEPTH, na.rm=TRUE),LTDEPTHnew)) %>% 
+  ungroup()
+```
+
+```{r}
+data<-data %>%
+  mutate(LTFRONTnew=ifelse(is.na(LTFRONTnew)==TRUE,median(LTFRONT,na.rm=TRUE),LTFRONTnew),LTDEPTHnew=ifelse(is.na(LTDEPTHnew)==TRUE,median(LTDEPTH, na.rm=TRUE),LTDEPTHnew))
+```
+
+
+```{r}
+# fill in BLDFRONT, BLDDEPTH
+data<-data %>% 
+  group_by(BLDGCL) %>%
+  mutate(BLDFRONTnew=ifelse(is.na(BLDFRONT)==TRUE,median(BLDFRONT, na.rm=TRUE),BLDFRONT),BLDDEPTHnew=ifelse(is.na(BLDDEPTH)==TRUE,median(BLDDEPTH, na.rm=TRUE),BLDDEPTH)) %>% 
+  ungroup()
+```
+
+```{r}
+data<-data %>%
+  mutate(BLDFRONTnew=ifelse(is.na(BLDFRONT)==TRUE,median(BLDFRONT, na.rm=TRUE),BLDFRONT),BLDDEPTHnew=ifelse(is.na(BLDDEPTH)==TRUE,median(BLDDEPTH, na.rm=TRUE),BLDDEPTH))
+```
+
+```{r}
+# fill in STORIES
+data<-data %>% 
+  group_by(BLDGCL,ZIP) %>%
+  mutate(STORIESnew=ifelse(is.na(STORIES)==TRUE,mean(STORIES, na.rm=TRUE),STORIES)) %>% 
+  ungroup()
+```
+
+```{r}
+# fill in STORIES
+data<-data %>% 
+  group_by(BLDGCL) %>%
+  mutate(STORIESnew=ifelse(is.na(STORIESnew)==TRUE,mean(STORIESnew, na.rm=TRUE),STORIESnew)) %>% 
+  ungroup()
+```
+
+```{r}
+# fill in STORIES
+data<-data %>% 
+  mutate(STORIESnew=ifelse(is.na(STORIESnew)==TRUE,mean(STORIESnew, na.rm=TRUE),STORIESnew))
+```
+
+-----------------creat 45 variables---------------------------------------
+
+```{r}
+data$S1 <- data$LTFRONTnew * data$LTDEPTHnew
+data$S2 <- data$BLDFRONTnew * data$BLDDEPTHnew
+data$S3 <- data$S2 * data$STORIESnew
+data$r1 <- data$FULLVALnew/data$S1
+data$r2 <- data$FULLVALnew/data$S2
+data$r3 <- data$FULLVALnew/data$S3
+data$r4 <- data$AVLANDnew/data$S1
+data$r5 <- data$AVLANDnew/data$S2
+data$r6 <- data$AVLANDnew/data$S3
+data$r7 <- data$AVTOTnew/data$S1
+data$r8 <- data$AVTOTnew/data$S2
+data$r9 <- data$AVTOTnew/data$S3
+data$ZIP3 <- substr(data$ZIPnew, 1,3)
+```
+
+```{r}
+data <- data %>%
+  group_by(ZIP3) %>%
+  mutate(r1_zip3 = mean(r1,na.rm=T),
+         r2_zip3 = mean(r2,na.rm=T),
+         r3_zip3 = mean(r3,na.rm=T),
+         r4_zip3 = mean(r4,na.rm=T),
+         r5_zip3 = mean(r5,na.rm=T),
+         r6_zip3 = mean(r6,na.rm=T),
+         r7_zip3 = mean(r7,na.rm=T),
+         r8_zip3 = mean(r8,na.rm=T),
+         r9_zip3 = mean(r9,na.rm=T)) %>%
+  ungroup()
+```
+
+```{r}
+data <-data %>%
+  group_by(ZIPnew) %>%
+  mutate(r1_zip5 = mean(r1,na.rm=T),
+         r2_zip5 = mean(r2,na.rm=T),
+         r3_zip5 = mean(r3,na.rm=T),
+         r4_zip5 = mean(r4,na.rm=T),
+         r5_zip5 = mean(r5,na.rm=T),
+         r6_zip5 = mean(r6,na.rm=T),
+         r7_zip5 = mean(r7,na.rm=T),
+         r8_zip5 = mean(r8,na.rm=T),
+         r9_zip5 = mean(r9,na.rm=T)) %>%
+  ungroup()
+```
+
+```{r}
+data <- data %>%
+  group_by(TAXCLASS) %>%
+  mutate(r1_taxclass = mean(r1,na.rm=T),
+         r2_taxclass = mean(r2,na.rm=T),
+         r3_taxclass = mean(r3,na.rm=T),
+         r4_taxclass = mean(r4,na.rm=T),
+         r5_taxclass = mean(r5,na.rm=T),
+         r6_taxclass = mean(r6,na.rm=T),
+         r7_taxclass = mean(r7,na.rm=T),
+         r8_taxclass = mean(r8,na.rm=T),
+         r9_taxclass = mean(r9,na.rm=T)) %>%
+  ungroup()
+```
+
+
+```{r}
+data <- data %>%
+  group_by(B) %>%
+  mutate(r1_borough = mean(r1,na.rm=T),
+         r2_borough = mean(r2,na.rm=T),
+         r3_borough = mean(r3,na.rm=T),
+         r4_borough = mean(r4,na.rm=T),
+         r5_borough = mean(r5,na.rm=T),
+         r6_borough = mean(r6,na.rm=T),
+         r7_borough = mean(r7,na.rm=T),
+         r8_borough = mean(r8,na.rm=T),
+         r9_borough = mean(r9,na.rm=T)) %>%
+  ungroup()
+```
+
+
+```{r}
+data <- data %>%
+  group_by(ZIPnew, ZIP3, TAXCLASS, B) %>%
+  mutate(r1_all = mean(r1,na.rm=T),
+         r2_all = mean(r2,na.rm=T),
+         r3_all = mean(r3,na.rm=T),
+         r4_all = mean(r4,na.rm=T),
+         r5_all = mean(r5,na.rm=T),
+         r6_all = mean(r6,na.rm=T),
+         r7_all = mean(r7,na.rm=T),
+         r8_all = mean(r8,na.rm=T),
+         r9_all = mean(r9,na.rm=T)) %>%
+  ungroup()
+```
+
+```{r}
+data<-data %>%
+  mutate(l1 = r1/r1_zip3,
+         l2 = r2/r2_zip3,
+         l3 = r3/r3_zip3,
+         l4 = r4/r4_zip3,
+         l5 = r5/r5_zip3,
+         l6 = r6/r6_zip3,
+         l7 = r7/r7_zip3,
+         l8 = r8/r8_zip3,
+         l9 = r9/r9_zip3,
+         l10 = r1/r1_zip5,
+         l11 = r2/r2_zip5,
+         l12 = r3/r3_zip5,
+         l13 = r4/r4_zip5,
+         l14 = r5/r5_zip5,
+         l15 = r6/r6_zip5,
+         l16 = r7/r7_zip5,
+         l17 = r8/r8_zip5,
+         l18 = r9/r9_zip5,
+         l19 = r1/r1_taxclass,
+         l20 = r2/r2_taxclass,
+         l21 = r3/r3_taxclass,
+         l22 = r4/r4_taxclass,
+         l23 = r5/r5_taxclass,
+         l24 = r6/r6_taxclass,
+         l25 = r7/r7_taxclass,
+         l26 = r8/r8_taxclass,
+         l27 = r9/r9_taxclass,
+         l28 = r1/r1_borough,
+         l29 = r2/r2_borough,
+         l30 = r3/r3_borough,
+         l31 = r4/r4_borough,
+         l32 = r5/r5_borough,
+         l33 = r6/r6_borough,
+         l34 = r7/r7_borough,
+         l35 = r8/r8_borough,
+         l36 = r9/r9_borough,
+         l37 = r1/r1_all,
+         l38 = r2/r2_all,
+         l39 = r3/r3_all,
+         l40 = r4/r4_all,
+         l41 = r5/r5_all,
+         l42 = r6/r6_all,
+         l43 = r7/r7_all,
+         l44 = r8/r8_all,
+         l45 = r9/r9_all)
+```
+
+---------------------------- scale variables----------------------------------------------------------------
+
+
+```{r}
+data_zscaled<-sapply(data[,112:156], function(x) scale(x))
+data_zscaled<-as.data.frame(data_zscaled)
+```
+
+#METHOD2:
+```{r}
+library(radiant)
+data_q_b <- sapply(data[,112:156], function(x) xtile(x, n=1000, rev = FALSE))
+```
+
+```{r}
+data_q_b_2 <- as.data.frame(data_q_b)
+```
+
+# METHOD 3
+```{r}
+record<-seq(1,length(data$l1),by=1)
+df<-data.frame(Record=record)
+```
+
+```{r}
+df<-sapply(data[,112:156], function(x) dense_rank(desc(x)))
+```
+
+```{r}
+df<-as.data.frame(df)
+```
+
+```{r}
+write.csv(df,'full_rank.csv')
+```
+
+
