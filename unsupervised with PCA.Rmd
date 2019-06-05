@@ -1,0 +1,54 @@
+---
+title: "unsupervised with PCA"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Use the avg of two zscore. One is the simple combination of PCs, the other is to use an autoencoder to reproduce zscaled PCs. Then take the avg of the two score to get final records with highest fraud score.
+```{r}
+data_z <- read.csv(file ='data_zscaled.csv')%>%
+  select(-X)
+data_z.pca <-prcomp(data_z, scale = FALSE)
+summary(data_z.pca)
+plot(data_z.pca)
+data_pca <-data_z.pca$x[,1:5] 
+data_pca <-as.data.frame(data_pca)
+data_pca_zsclaed <- sapply(data_pca[,1:5], function(x) scale(x))
+data_pca_zsclaed<-as.data.frame(data_pca_zsclaed)
+
+data_pca_zsclaed <- data_pca_zsclaed %>%
+  mutate(sum = abs(PC1)+abs(PC2)+abs(PC3)+abs(PC4)+abs(PC5))%>%
+  mutate(square = square(PC1)+square(PC2)+square(PC3)+square(PC4)+square(PC5))%>%
+  mutate(max = pmax(PC1,PC2,PC3,PC4,PC5))%>%
+  mutate(min = pmin(PC1,PC2,PC3,PC4,PC5))%>%
+  mutate(zscore1 =(abs(PC1)^5+abs(PC2)^5+abs(PC3)^5+abs(PC4)^5+abs(PC5)^5)^0.2)
+
+
+```
+
+
+```{r}
+library(autoencoder)
+train <- data.matrix(data_pca_zsclaed[,1:5])
+model <- autoencoder::autoencode(train,nl =3 ,N.hidden = 10,lambda = 0.0002,beta = 6,rho =0.01,epsilon = 0.001)
+
+prediction <- autoencoder::predict.autoencoder(model,train)
+prediction_new <-data.frame(prediction$X.output)
+train_new <-data.frame(train)
+cbind_set <-cbind(train_new,prediction_new)%>%
+  mutate(zscore2 = (abs(X1-PC1)^5+abs(X2-PC2)^5+abs(X3-PC3)^5+abs(X4-PC4)^5+abs(X5-PC5)^5)^0.2)%>%
+  select(zscore2)
+
+final_set <- cbind(data_pca_zsclaed,cbind_set)%>%
+  mutate(final_z_score = (zscore1+zscore2)/2)%>%
+  mutate(ID =row_number())%>%
+  arrange(desc(final_z_score))
+```
+
+```{r}
+head(final_set,10)
+```
+
